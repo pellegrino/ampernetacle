@@ -6,6 +6,7 @@ locals {
     "containerd.io",
     "curl",
     "docker-ce",
+    "htop",
     "jq",
     "kubeadm",
     "kubelet",
@@ -14,6 +15,7 @@ locals {
     "prometheus-node-exporter",
     "python3-pip",
     "software-properties-common",
+    "tailscale",
     "tmux",
     "tree",
     "unzip",
@@ -34,6 +36,10 @@ data "cloudinit_config" "_" {
       ${yamlencode(local.packages)}
       apt:
         sources:
+          tailscale.list:
+            source: "deb https://pkgs.tailscale.com/stable/ubuntu focal main"
+            key: |
+              ${indent(8, data.http.tailscale_apt_repo_key.response_body)}
           kubernetes.list:
             source: "deb https://apt.kubernetes.io/ kubernetes-xenial main"
             key: |
@@ -88,6 +94,16 @@ data "cloudinit_config" "_" {
         content: |
           ${indent(4, tls_private_key.ssh.public_key_openssh)}
       EOF
+  }
+
+  # Connects to tailnet
+  part {
+    filename     = "tailscale-connect.sh"
+    content_type = "text/x-shellscript"
+    content      = <<-EOF
+      #!/bin/sh
+      sudo tailscale up --authkey ${var.tailscale_authkey} --accept-routes --ssh
+    EOF
   }
 
   # By default, all inbound traffic is blocked
@@ -167,6 +183,10 @@ data "http" "kubernetes_repo_key" {
 
 data "http" "docker_repo_key" {
   url = "https://download.docker.com/linux/debian/gpg"
+}
+
+data "http" "tailscale_apt_repo_key" {
+  url = "https://pkgs.tailscale.com/stable/ubuntu/jammy.gpg"
 }
 
 # The kubeadm token must follow a specific format:

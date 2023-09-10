@@ -36,3 +36,8 @@ variable "memory_in_gbs_per_node" {
   type    = number
   default = 6
 }
+
+variable "tailscale_authkey" {
+  type        = string
+  description = "Tailscale authkey used to join the node"
+}
